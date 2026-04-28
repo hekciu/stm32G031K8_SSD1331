@@ -22,6 +22,8 @@
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 
+#include <stdbool.h>
+
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -56,6 +58,31 @@ static void MX_DMA_Init(void);
 static void MX_USART2_UART_Init(void);
 static void MX_SPI1_Init(void);
 /* USER CODE BEGIN PFP */
+
+static void SSD1331_Initialize() {
+	// HIGH
+	HAL_GPIO_WritePin(RES_GPIO_Port, RES_Pin, GPIO_PIN_SET);
+	HAL_Delay(10);
+
+	// LOW
+	HAL_GPIO_WritePin(RES_GPIO_Port, RES_Pin, GPIO_PIN_RESET);
+	HAL_Delay(50);
+
+	// HIGH
+	HAL_GPIO_WritePin(RES_GPIO_Port, RES_Pin, GPIO_PIN_SET);
+}
+
+static void SSD1331_Send_Data(char* data, uint16_t len, bool isCommand) {
+	HAL_GPIO_WritePin(CS_GPIO_Port, CS_Pin, GPIO_PIN_SET);
+
+	if (isCommand) {
+		HAL_GPIO_WritePin(DC_GPIO_Port, DC_Pin, GPIO_PIN_RESET);
+	} else {
+		HAL_GPIO_WritePin(DC_GPIO_Port, DC_Pin, GPIO_PIN_SET);
+	}
+
+	HAL_SPI_Transmit(&hspi1, (uint8_t *)data, len, 1000);
+}
 
 /* USER CODE END PFP */
 
@@ -98,6 +125,11 @@ int main(void)
   MX_SPI1_Init();
   /* USER CODE BEGIN 2 */
 
+  SSD1331_Initialize();
+
+  const char* turn_screen_on_data = { 0xAF , '\0'};
+  const char* turn_screen_off_data = { 0xAE , '\0'};
+
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -105,6 +137,14 @@ int main(void)
   while (1)
   {
     /* USER CODE END WHILE */
+
+    SSD1331_Send_Data(turn_screen_on_data, strlen(turn_screen_on_data), true);
+
+    HAL_Delay(500);
+
+    SSD1331_Send_Data(turn_screen_off_data, strlen(turn_screen_off_data), true);
+
+    HAL_Delay(500);
 
     /* USER CODE BEGIN 3 */
   }
