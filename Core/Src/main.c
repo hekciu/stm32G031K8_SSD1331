@@ -101,6 +101,18 @@ static void SSD1331_Send_Data(uint8_t* data, uint16_t len) {
 	SSD1331_Deselect();
 }
 
+static void SSD1331_Set_Contrast_A(uint8_t value) {
+	SSD1331_Send_Command(0x81); SSD1331_Send_Command(value);
+}
+
+static void SSD1331_Set_Contrast_B(uint8_t value) {
+	SSD1331_Send_Command(0x82); SSD1331_Send_Command(value);
+}
+
+static void SSD1331_Set_Contrast_C(uint8_t value) {
+	SSD1331_Send_Command(0x83); SSD1331_Send_Command(value);
+}
+
 static void SSD1331_Initialize() {
 	SSD1331_Reset_Low();
 	HAL_Delay(10);
@@ -125,9 +137,9 @@ static void SSD1331_Initialize() {
 	SSD1331_Send_Command(0xBB); SSD1331_Send_Command(0x3A); // Precharge Level
 	SSD1331_Send_Command(0xBE); SSD1331_Send_Command(0x3E); // VCOMH
 	SSD1331_Send_Command(0x87); SSD1331_Send_Command(0x06); // Master Current
-	SSD1331_Send_Command(0x81); SSD1331_Send_Command(0x91); // Contrast A
-	SSD1331_Send_Command(0x82); SSD1331_Send_Command(0x50); // Contrast B
-	SSD1331_Send_Command(0x83); SSD1331_Send_Command(0x7D); // Contrast C
+	SSD1331_Set_Contrast_A(0x91);
+	SSD1331_Set_Contrast_B(0x50);
+	SSD1331_Set_Contrast_C(0x7D);
 	SSD1331_Send_Command(0xAF);              // Display ON
 }
 
