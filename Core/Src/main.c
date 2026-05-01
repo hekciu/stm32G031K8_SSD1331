@@ -22,6 +22,7 @@
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 
+#include <stdlib.h>
 #include <stdbool.h>
 
 /* USER CODE END Includes */
@@ -33,6 +34,9 @@
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
+
+#define SSD1331_WIDTH 96
+#define SSD1331_HEIGHT 64
 
 /* USER CODE END PD */
 
@@ -59,29 +63,90 @@ static void MX_USART2_UART_Init(void);
 static void MX_SPI1_Init(void);
 /* USER CODE BEGIN PFP */
 
-static void SSD1331_Initialize() {
-	// HIGH
-	HAL_GPIO_WritePin(RES_GPIO_Port, RES_Pin, GPIO_PIN_SET);
-	HAL_Delay(10);
-
-	// LOW
+static void SSD1331_Reset_Low() {
 	HAL_GPIO_WritePin(RES_GPIO_Port, RES_Pin, GPIO_PIN_RESET);
-	HAL_Delay(50);
+}
 
-	// HIGH
+static void SSD1331_Reset_High() {
 	HAL_GPIO_WritePin(RES_GPIO_Port, RES_Pin, GPIO_PIN_SET);
 }
 
-static void SSD1331_Send_Data(char* data, uint16_t len, bool isCommand) {
+static void SSD1331_Select() {
+	HAL_GPIO_WritePin(CS_GPIO_Port, CS_Pin, GPIO_PIN_RESET);
+}
+
+static void SSD1331_Deselect() {
 	HAL_GPIO_WritePin(CS_GPIO_Port, CS_Pin, GPIO_PIN_SET);
+}
 
-	if (isCommand) {
-		HAL_GPIO_WritePin(DC_GPIO_Port, DC_Pin, GPIO_PIN_RESET);
-	} else {
-		HAL_GPIO_WritePin(DC_GPIO_Port, DC_Pin, GPIO_PIN_SET);
-	}
+static void SSD1331_Send_Command(uint8_t data) {
+	HAL_GPIO_WritePin(DC_GPIO_Port, DC_Pin, GPIO_PIN_RESET);
+	SSD1331_Select();
 
-	HAL_SPI_Transmit(&hspi1, (uint8_t *)data, len, 1000);
+	HAL_SPI_Transmit(&hspi1, &data, 1, HAL_MAX_DELAY);
+
+	SSD1331_Deselect();
+
+}
+
+static void SSD1331_Send_Data(uint8_t* data, uint16_t len) {
+	HAL_GPIO_WritePin(DC_GPIO_Port, DC_Pin, GPIO_PIN_SET);
+
+	SSD1331_Select();
+
+	HAL_SPI_Transmit(&hspi1, data, len, HAL_MAX_DELAY);
+
+	SSD1331_Deselect();
+}
+
+static void SSD1331_Initialize() {
+	SSD1331_Reset_Low();
+	HAL_Delay(10);
+
+	SSD1331_Reset_High();
+	HAL_Delay(50);
+
+	// Initialization sequence
+	SSD1331_Send_Command(0xAE);              // Display off
+	SSD1331_Send_Command(0xA0); SSD1331_Send_Command(0x72); // Set Remap & Color Depth
+	SSD1331_Send_Command(0xA1); SSD1331_Send_Command(0x00); // Set Display Start Line
+	SSD1331_Send_Command(0xA2); SSD1331_Send_Command(0x00); // Set Display Offset
+	SSD1331_Send_Command(0xA4);              // Normal Display (not all-on)
+	SSD1331_Send_Command(0xA8); SSD1331_Send_Command(0x3F); // Set Multiplex Ratio
+	SSD1331_Send_Command(0xAD); SSD1331_Send_Command(0x8E); // Master Config
+	SSD1331_Send_Command(0xB0); SSD1331_Send_Command(0x0B); // Power Save Mode
+	SSD1331_Send_Command(0xB1); SSD1331_Send_Command(0x31); // Phase Period Adjust
+	SSD1331_Send_Command(0xB3); SSD1331_Send_Command(0xF0); // Clock Divider / Oscillator
+	SSD1331_Send_Command(0x8A); SSD1331_Send_Command(0x64); // Precharge A
+	SSD1331_Send_Command(0x8B); SSD1331_Send_Command(0x78); // Precharge B
+	SSD1331_Send_Command(0x8C); SSD1331_Send_Command(0x64); // Precharge C
+	SSD1331_Send_Command(0xBB); SSD1331_Send_Command(0x3A); // Precharge Level
+	SSD1331_Send_Command(0xBE); SSD1331_Send_Command(0x3E); // VCOMH
+	SSD1331_Send_Command(0x87); SSD1331_Send_Command(0x06); // Master Current
+	SSD1331_Send_Command(0x81); SSD1331_Send_Command(0x91); // Contrast A
+	SSD1331_Send_Command(0x82); SSD1331_Send_Command(0x50); // Contrast B
+	SSD1331_Send_Command(0x83); SSD1331_Send_Command(0x7D); // Contrast C
+	SSD1331_Send_Command(0xAF);              // Display ON
+}
+
+static void SSD1331_Draw_Pixel(uint8_t x, uint8_t y, uint16_t color) {
+	// set column
+	SSD1331_Send_Command(0x15);
+	SSD1331_Send_Command(x);
+	SSD1331_Send_Command(x);
+
+	// set row
+	SSD1331_Send_Command(0x75);
+	SSD1331_Send_Command(y);
+	SSD1331_Send_Command(y);
+
+	// send pixel color (in RGB565 format)
+	uint8_t data[2] = {
+	    a,
+		b
+	};
+
+	SSD1331_Send_Data((uint8_t*)color, 2);
 }
 
 /* USER CODE END PFP */
@@ -127,9 +192,6 @@ int main(void)
 
   SSD1331_Initialize();
 
-  const char* turn_screen_on_data = { 0xAF , '\0'};
-  const char* turn_screen_off_data = { 0xAE , '\0'};
-
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -138,11 +200,11 @@ int main(void)
   {
     /* USER CODE END WHILE */
 
-    SSD1331_Send_Data(turn_screen_on_data, strlen(turn_screen_on_data), true);
-
-    HAL_Delay(500);
-
-    SSD1331_Send_Data(turn_screen_off_data, strlen(turn_screen_off_data), true);
+	for (int i = 0; i < SSD1331_WIDTH; i++) {
+		for (int j = 0; j < SSD1331_HEIGHT; j++) {
+			SSD1331_Draw_Pixel(i, j, rand() % 65535);
+		}
+	}
 
     HAL_Delay(500);
 
