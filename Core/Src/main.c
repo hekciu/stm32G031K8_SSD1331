@@ -25,6 +25,8 @@
 #include <stdlib.h>
 #include <stdbool.h>
 
+#include "epstein.h"
+
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -149,6 +151,21 @@ static void SSD1331_Draw_Pixel(uint8_t x, uint8_t y, uint16_t color) {
 	SSD1331_Send_Data(data, 2);
 }
 
+static void SSD1331_Draw_Whole_Image(uint8_t* data) {
+	for (size_t w = 0; w < SSD1331_WIDTH; w++) {
+		 for (size_t h = 0; h < SSD1331_HEIGHT; h++){
+			size_t index = w * SSD1331_WIDTH + h;
+
+			uint8_t pixel_low_byte = *(data + (index * 2));
+			uint8_t pixel_high_byte = *(data + (index * 2 + 1));
+
+			uint16_t pixel = ((uint16_t)pixel_high_byte << 8) + (uint16_t)pixel_low_byte;
+
+			SSD1331_Draw_Pixel(w, h, pixel);
+		}
+	}
+}
+
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
@@ -200,13 +217,16 @@ int main(void)
   {
     /* USER CODE END WHILE */
 
+	/*
 	for (int i = 0; i < SSD1331_WIDTH; i++) {
 		for (int j = 0; j < SSD1331_HEIGHT; j++) {
 			SSD1331_Draw_Pixel(i, j, rand() % 65535);
 		}
 	}
+	*/
+	SSD1331_Draw_Whole_Image(epstein_raw);
 
-    HAL_Delay(500);
+    HAL_Delay(50);
 
     /* USER CODE BEGIN 3 */
   }
