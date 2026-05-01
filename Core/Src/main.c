@@ -142,11 +142,11 @@ static void SSD1331_Draw_Pixel(uint8_t x, uint8_t y, uint16_t color) {
 
 	// send pixel color (in RGB565 format)
 	uint8_t data[2] = {
-	    a,
-		b
+	    color >> 8,
+		color & 0xFF
 	};
 
-	SSD1331_Send_Data((uint8_t*)color, 2);
+	SSD1331_Send_Data(data, 2);
 }
 
 /* USER CODE END PFP */
